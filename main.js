@@ -1,28 +1,56 @@
 async function translate(text, from, to, options) {
     const { config, utils } = options;
-    const { tauriFetch: fetch } = utils;
+    const { http } = utils;
+    const { fetch } = http;
+
     let { requestPath: url } = config;
-    let plain_text = text.replaceAll("/", "@@");
-    let encode_text = encodeURIComponent(plain_text);
+    let { apiKey } = config;
+    let { model } = config;
+    let { stream } = config;
+
     if (url === undefined || url.length === 0) {
-        url = "lingva.pot-app.com"
+        url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
     }
     if (!url.startsWith("http")) {
         url = `https://${url}`;
     }
-    const res = await fetch(`${url}/api/v1/${from}/${to}/${encode_text}`, {
-        method: 'GET',
-    });
 
-    if (res.ok) {
-        let result = res.data;
-        const { translation } = result;
-        if (translation) {
-            return translation.replaceAll("@@", "/");;
-        } else {
-            throw JSON.stringify(result.trim());
+    if (model === undefined || model.length === 0) {
+        model = "qwen-mt-turbo";
+    }
+
+    const headers = {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": 'application/json'
+    };
+
+    const body = {
+        model: model,
+        messages: [{ role: 'user', content: text }],
+        translation_options: {
+            source_lang: from,
+            target_lang: to
         }
-    } else {
-        throw `Http Request Error\nHttp Status: ${res.status}\n${JSON.stringify(res.data)}`;
+    };
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: {
+                type: "Json",
+                payload: body
+            }
+        });
+
+        if (res.ok) {
+            const text = await res.data;
+            try {
+                return text.choices[0].message.content.trim();
+            } catch (err) {
+                throw `Translation error: ${err}`;
+            }
+        }
+    } catch (err) {
+        throw `Fetch error: ${err}`;
     }
 }
