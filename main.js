@@ -16,7 +16,7 @@ async function translate(text, from, to, options) {
     }
 
     if (model === undefined || model.length === 0) {
-        model = "qwen-mt-turbo";
+        model = "qwen-mt-flash";
     }
 
     const headers = {
